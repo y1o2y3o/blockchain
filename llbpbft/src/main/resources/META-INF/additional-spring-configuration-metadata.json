@@ -1,0 +1,13 @@
+{
+  "properties": [
+    {
+      "name": "regcenter.port",
+      "type": "java.lang.String",
+      "description": "Description for regcenter.port."
+    },
+    {
+      "name": "regcenter.ip",
+      "type": "java.lang.String",
+      "description": "Description for regcenter.ip."
+    }
+  ] }
