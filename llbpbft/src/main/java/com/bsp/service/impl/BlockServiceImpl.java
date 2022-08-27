@@ -1,8 +1,11 @@
 package com.bsp.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.bsp.dao.BlockDao;
 import com.bsp.entity.Block;
+import com.bsp.enums.FlagEnum;
 import com.bsp.exceptions.CommonException;
 import com.bsp.service.BlockService;
 import com.bsp.status.LocalStatus;
@@ -53,6 +56,22 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
     }
 
     @Override
+    public Block genNewBlock(Block highBlock, Integer curViewNum, String editOptions, String curAggrSig) {
+        Block newBlock = Block.builder()
+                .blockId(SnowFlakeIdUtil.getSnowflakeId())
+                .viewNumber(curViewNum)
+                .content(editOptions)
+                .aggrSig(curAggrSig)
+                .parentBlockId(highBlock.getBlockId())
+                .parentHash(highBlock.getHash())
+                .height(highBlock.getHeight() + 1)
+                .build();
+        String hash = Hashing.genHashDigest(newBlock);
+        newBlock.setHash(hash);
+        return newBlock;
+    }
+
+    @Override
     public void update(Block block) {
         synchronized (LocalStatus.class) {
             Block parent1 = blockDao.selectById(block.getParentBlockId());
@@ -93,5 +112,52 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
             return false;
         }
 
+    }
+
+    @Override
+    public void pullLocalStatus() {
+        // 分别查找COMMITTED、LOCKED、PREPARED
+        Block committedBlock = blockDao.selectList(
+                Wrappers.lambdaQuery(Block.class)
+                        .eq(Block::getFlag, FlagEnum.COMMITTED.toString())
+                        .orderByDesc(Block::getHeight)
+        ).get(0);
+
+        Block lockedBlock = blockDao.selectList(
+                Wrappers.lambdaQuery(Block.class)
+                        .eq(Block::getFlag, FlagEnum.LOCKED.toString())
+        ).get(0);
+
+        Block preparedBlock = blockDao.selectList(
+                Wrappers.lambdaQuery(Block.class)
+                        .eq(Block::getFlag, FlagEnum.PREPARED.toString())
+                        .eq(Block::getParentBlockId, lockedBlock.getBlockId())
+        ).get(0);
+
+        int curMaxBlockHeight = preparedBlock.getHeight();
+
+        int curViewNum = preparedBlock.getViewNumber();
+
+        localStatus.setCommittedBlock(committedBlock);
+        localStatus.setPreparedBlock(preparedBlock);
+        localStatus.setLockedBlock(lockedBlock);
+        localStatus.setCurViewNumber(curViewNum);
+        localStatus.setMaxBlockHeight(curMaxBlockHeight);
+
+
+    }
+
+    @Override
+    public void insertAndUpdateNewBlock(Block block) {
+        Block preparedBlock = localStatus.getPreparedBlock();
+        Block lockedBlock = localStatus.getLockedBlock();
+
+        block.setFlag(FlagEnum.PREPARED.toString());
+        lockedBlock.setFlag(FlagEnum.COMMITTED.toString());
+        preparedBlock.setFlag(FlagEnum.LOCKED.toString());
+        saveOrUpdate(block);
+        saveOrUpdate(lockedBlock);
+        saveOrUpdate(preparedBlock);
+        pullLocalStatus();
     }
 }

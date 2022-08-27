@@ -8,6 +8,7 @@ create table Block
     content text null,
     hash varchar(1024) null,
     aggr_sig varchar(1024) null,
+    flag varchar(10) null,
     constraint Blocks_pk
         unique (block_id)
 );

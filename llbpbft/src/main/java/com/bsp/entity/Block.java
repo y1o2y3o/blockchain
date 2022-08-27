@@ -42,4 +42,7 @@ public class Block {
 
     @TableField("aggr_sig")
     private String aggrSig; // 当前视图对父区块(viewNumber + parentHash)的聚合签名
+
+    @TableField("flag")
+    private String flag; // 状态COMMITTED LOCKED PREPARED
 }

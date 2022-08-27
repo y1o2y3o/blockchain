@@ -28,10 +28,10 @@ public class HeartBeatController {
     @GetMapping("")
     public Result<?> handleEditRequest(@RequestParam("url") String url) {
         log.info(url);
-        if(keyCenterService.addNewHost(url)){ // 存在若新的节点，则注册并分发密钥
+        if (keyCenterService.addNewHost(url)) { // 存在若新的节点，则注册并分发密钥
             keyCenterService.updateSecretKeyStatus();
-            keyCenterService.distributeKeyStatus();
         }
+        keyCenterService.distributeKeyStatus();
         return Result.success(status);
     }
 

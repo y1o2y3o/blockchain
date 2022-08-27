@@ -26,6 +26,16 @@ public interface BlockService extends IService<Block> {
     Block extendNewBlock(Block highBlock, Integer curViewNum, String editOptions, String curAggrSig);
 
     /**
+     * 在区块链上扩展新区块
+     *
+     * @param highBlock
+     * @param curViewNum
+     * @param editOptions
+     * @param curAggrSig
+     * @return
+     */
+    Block genNewBlock(Block highBlock, Integer curViewNum, String editOptions, String curAggrSig);
+    /**
      * 更新区块
      *
      * @param block
@@ -45,4 +55,14 @@ public interface BlockService extends IService<Block> {
      * @param block
      */
     Boolean isSafeNewBlock(Block block);
+
+    /**
+     * updateLocalStatus
+     */
+    void pullLocalStatus();
+
+    /**
+     * updateLocalStatus
+     */
+    void insertAndUpdateNewBlock(Block block);
 }

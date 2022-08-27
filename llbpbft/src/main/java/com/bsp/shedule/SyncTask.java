@@ -1,19 +1,17 @@
 package com.bsp.shedule;
 
 
-import com.alibaba.fastjson.JSON;
 import com.bsp.conf.ServerConfig;
+import com.bsp.entity.Block;
+import com.bsp.service.BlockService;
 import com.csp.constant.Cons;
-import com.csp.web.Result;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import javax.annotation.Resource;
-import java.util.HashMap;
 import java.util.Objects;
 
 
@@ -32,6 +30,9 @@ public class SyncTask {
     @Resource
     private RestTemplate restTemplate;
 
+    @Resource
+    private BlockService blockService;
+
     /**
      * 定时向注册中心心跳链接
      */
@@ -39,17 +40,17 @@ public class SyncTask {
     @Async
     void heartConn() {
         String regUrl = serverConfig.getRegUrl();
-        log.info(Objects.requireNonNull(restTemplate.getForObject(regUrl + "/heartBeat?url=" + serverConfig.getUrl(),
-                Object.class)).toString());
+        Objects.requireNonNull(restTemplate.getForObject(regUrl + "/heartBeat?url=" + serverConfig.getUrl(), Object.class));
         log.info("heartConn Task: 定时启动!");
     }
 
     /**
-     * 定时清理悬空Attachment
+     * 测试程序
      */
-//    @Scheduled(fixedRate = Global.CHECK_SUSPEND_ATTACHMENT)
-    @Async
-    void scanAttachment() throws Exception {
-
+//    @Scheduled(fixedRate = Cons.COMMON_EXPIRED)
+//    @Async
+    void test() throws Exception {
+        blockService.save(Block.builder().build());
+        log.info("test Task:定时启动!");
     }
 }

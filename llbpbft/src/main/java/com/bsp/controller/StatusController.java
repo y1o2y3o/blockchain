@@ -64,10 +64,8 @@ public class StatusController {
             if (Objects.equals(hostUrl, serverConfig.getUrl())) {
                 globalStatus.setSecretKeys(secretKeys);
             }
-
         });
-        System.out.println(status);
-
+        log.info(globalStatus.toString());
         return Result.success();
     }
 
