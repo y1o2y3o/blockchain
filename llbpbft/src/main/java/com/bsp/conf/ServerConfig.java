@@ -1,5 +1,7 @@
 package com.bsp.conf;
 
+import lombok.Data;
+import lombok.Getter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 
@@ -12,6 +14,7 @@ import java.net.UnknownHostException;
  * @author zksfromusa
  */
 @Configuration
+@Getter
 public class ServerConfig {
 
     @Value("${server.port}")
@@ -20,13 +23,19 @@ public class ServerConfig {
     @Value("${server.servlet.context-path}")
     private String contextPath;
 
-    @Value("${regcenter.ip}")
-    private String regIp;
+    @Value("${regcenter.host}")
+    private String regHost;
+
+    @Value("${regcenter.port}")
+    private String regPort;
+
+    @Value("${regcenter.contextPath}")
+    private String regContextPath;
 
     /**
      * 项目获取当前服务的IP端口地址
      *
-     * @return
+     * @return String
      */
     public String getUrl() {
         InetAddress address = null;
@@ -37,6 +46,15 @@ public class ServerConfig {
         }
         assert address != null;
         return "http://" + address.getHostAddress() + ":" + port + "/" + contextPath;
+    }
+
+    /**
+     * 获取服务注册中心的IP端口地址
+     *
+     * @return String
+     */
+    public String getRegUrl() {
+        return "http://" + getRegHost() + ":" + getRegPort() + getRegContextPath();
     }
 
 }

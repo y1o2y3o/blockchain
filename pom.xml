@@ -28,6 +28,7 @@
     <modules>
         <module>llbpbft</module>
         <module>regcenter</module>
+        <module>common</module>
     </modules>
 
 

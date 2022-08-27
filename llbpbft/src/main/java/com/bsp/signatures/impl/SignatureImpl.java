@@ -1,7 +1,7 @@
 package com.bsp.signatures.impl;
 
 import com.alibaba.fastjson.JSON;
-import com.bsp.entity.SecretKeys;
+import com.csp.sig.SecretKeys;
 import com.bsp.signatures.Signature;
 import com.bsp.status.GlobalStatus;
 import com.bsp.status.LocalStatus;

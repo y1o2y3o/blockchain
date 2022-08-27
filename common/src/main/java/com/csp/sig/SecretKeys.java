@@ -1,18 +1,14 @@
-package com.bsp.entity;
+package com.csp.sig;
 
 import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Field;
 import it.unisa.dia.gas.jpbc.Pairing;
-import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigInteger;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Random;
 
 /**
  * 密钥
@@ -35,6 +31,6 @@ public class SecretKeys {
     private Element partialPK; // 部分签名公钥
     private Element SK; // 系统主私钥
     private Element PK; // 系统主公钥
-    private BigInteger prime; // 大素数p
+//    private BigInteger prime; // 大素数p
 
 }

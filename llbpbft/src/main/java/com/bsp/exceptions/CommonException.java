@@ -1,7 +1,7 @@
 package com.bsp.exceptions;
 
 
-import com.bsp.web.ResultStatus;
+import com.csp.web.ResultStatus;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 

@@ -1,7 +1,6 @@
-package com.bsp.web;
+package com.csp.web;
 
 
-import com.bsp.exceptions.CommonException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -41,6 +40,13 @@ public class Result<T> {
      */
     public static <T> Result<T> success() {
         return new Result<>(HttpStatus.OK.value(), null, null);
+    }
+
+    /**
+     * 业务成功返回业务代码和data
+     */
+    public static <T> Result<T> success(T data) {
+        return new Result<>(HttpStatus.OK.value(), null, data);
     }
 
     /**

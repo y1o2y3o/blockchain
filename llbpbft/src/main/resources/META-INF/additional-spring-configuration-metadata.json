@@ -9,5 +9,15 @@
       "name": "regcenter.ip",
       "type": "java.lang.String",
       "description": "Description for regcenter.ip."
+    },
+    {
+      "name": "regcenter.host",
+      "type": "java.lang.String",
+      "description": "Description for regcenter.host."
+    },
+    {
+      "name": "regcenter.contextPath",
+      "type": "java.lang.String",
+      "description": "Description for regcenter.contextPath."
     }
   ] }

@@ -1,14 +1,10 @@
-package com.bsp.conf.constant;
+package com.csp.constant;
 
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
-
-@Component
 public class Cons {
 
-    public static final int APPCASH_CHECK_EXPIRED = 5 * 60 * 1000;
+    public static final int COMMON_EXPIRED = 5 * 60 * 1000;
 
 
     public static final int QUA_NO_MAX = 1000;

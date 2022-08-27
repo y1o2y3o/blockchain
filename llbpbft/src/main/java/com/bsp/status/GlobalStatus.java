@@ -1,6 +1,6 @@
 package com.bsp.status;
 
-import com.bsp.entity.SecretKeys;
+import com.csp.sig.SecretKeys;
 import lombok.Data;
 import org.springframework.stereotype.Component;
 
