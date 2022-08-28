@@ -64,6 +64,11 @@ public interface BlockService extends IService<Block> {
     /**
      * updateLocalStatus
      */
+    void pullLocalStatusWithoutView();
+
+    /**
+     * updateLocalStatus
+     */
     void insertAndUpdateNewBlock(Block block);
 
     /**

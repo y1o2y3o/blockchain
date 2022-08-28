@@ -67,4 +67,12 @@ public class StatusController {
         msgService.confirmHighBlock(); // 给下一个领导发送highblock信息
         return Result.success();
     }
+
+    // incrViewNum + 1
+    @GetMapping("/incrViewNum")
+    public Result<?> incrViewNum() {
+        Integer curViewNumber = localStatus.getCurViewNumber();
+        localStatus.setCurViewNumber(curViewNumber + 1);
+        return Result.success();
+    }
 }

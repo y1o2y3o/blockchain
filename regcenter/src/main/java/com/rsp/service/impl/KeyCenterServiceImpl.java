@@ -8,6 +8,7 @@ import it.unisa.dia.gas.jpbc.Element;
 import it.unisa.dia.gas.jpbc.Field;
 import it.unisa.dia.gas.jpbc.Pairing;
 import it.unisa.dia.gas.plaf.jpbc.pairing.PairingFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.tomcat.util.codec.binary.Base64;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -22,6 +23,7 @@ import java.util.List;
 import java.util.Objects;
 
 @Service
+@Slf4j
 public class KeyCenterServiceImpl implements KeyCenterService {
 
     @Resource
@@ -112,9 +114,14 @@ public class KeyCenterServiceImpl implements KeyCenterService {
         status.getHostList().forEach(hostUrl -> {
             HttpHeaders headers = new HttpHeaders();
             headers.add("Content-Type", "application/json;charset=UTF-8");
-            // 访问下一个节点
-            Objects.requireNonNull(restTemplate.postForObject(hostUrl + "/status/update",
-                    new HttpEntity<>(JSON.toJSONString(status), headers), String.class));
+            try {
+                // 访问下一个节点
+                Objects.requireNonNull(restTemplate.postForObject(hostUrl + "/status/update",
+                        new HttpEntity<>(JSON.toJSONString(status), headers), String.class));
+            } catch (Exception e) {
+                log.error(e.toString());
+            }
+
         });
     }
 

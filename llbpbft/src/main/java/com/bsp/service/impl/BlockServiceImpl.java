@@ -151,6 +151,37 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
     }
 
     @Override
+    public void pullLocalStatusWithoutView() {
+        // 分别查找COMMITTED、LOCKED、PREPARED
+        Block committedBlock = blockDao.selectList(
+                Wrappers.lambdaQuery(Block.class)
+                        .eq(Block::getFlag, FlagEnum.COMMITTED.toString())
+                        .orderByDesc(Block::getHeight)
+        ).get(0);
+
+        Block lockedBlock = blockDao.selectList(
+                Wrappers.lambdaQuery(Block.class)
+                        .eq(Block::getFlag, FlagEnum.LOCKED.toString())
+        ).get(0);
+
+        Block preparedBlock = blockDao.selectList(
+                Wrappers.lambdaQuery(Block.class)
+                        .eq(Block::getFlag, FlagEnum.PREPARED.toString())
+                        .eq(Block::getParentBlockId, lockedBlock.getBlockId())
+        ).get(0);
+
+        int curMaxBlockHeight = preparedBlock.getHeight();
+
+        int curViewNum = preparedBlock.getViewNumber() + 1;
+
+        localStatus.setCommittedBlock(committedBlock);
+        localStatus.setPreparedBlock(preparedBlock);
+        localStatus.setLockedBlock(lockedBlock);
+//        localStatus.setCurViewNumber(curViewNum);
+        localStatus.setMaxBlockHeight(curMaxBlockHeight);
+    }
+
+    @Override
     public void insertAndUpdateNewBlock(Block block) {
         Block preparedBlock = localStatus.getPreparedBlock();
         Block lockedBlock = localStatus.getLockedBlock();
@@ -161,7 +192,7 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
         saveOrUpdate(block);
         saveOrUpdate(lockedBlock);
         saveOrUpdate(preparedBlock);
-        pullLocalStatus();
+        pullLocalStatusWithoutView();
     }
 
     @Override

@@ -22,6 +22,14 @@ public interface MsgService {
     void post(String url, Object data);
 
     /**
+     * post 消息
+     *
+     * @param url
+     * @param data
+     */
+    boolean testAndPost(String url, Object data);
+
+    /**
      * get 消息
      *
      * @param fullUrl

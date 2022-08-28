@@ -68,7 +68,7 @@ public class MessageController {
         // 若上一个视图的PROPOSAL_VOTE消息 且 部分签名验证通过
         if (
                 blockService.blockEquals(curBlock, msg.getBlock())
-                        && Objects.equals(msg.getViewNumber() + 1, curViewNum)
+                        && msg.getViewNumber() + 1 <= curViewNum
                         && thresholdSignature.partialValidate(msg.getBlock(), msg.getPartialSig(), msg.getUrl())
         ) {
             // 收集部分签名
@@ -129,12 +129,13 @@ public class MessageController {
     //领导监听客户端请求
     @PostMapping("/REQUEST")
     public Result<?> handleEditRequest(@RequestBody @Valid EditRequest req) {
+        msgService.get(serverConfig.getRegUrl() + "/status/confirmHighBlock"); // 触发投票机制
         log.info(String.format("接收到%s消息，当前状态为%s", "REQUEST", localStatus.toString()));
         int curViewNum = localStatus.getCurViewNumber();
         if (!statusService.isCurrentLeader()) { // 不是领导
-            msgService.post(statusService.leader(curViewNum) + "/message/REQUEST", req);
+            boolean success = msgService.testAndPost(statusService.leader(curViewNum) + "/message/REQUEST", req);
             log.info("正在将用户请求 " + req + " 转发给当前视图[" + curViewNum + "]领导 " + statusService.leader(curViewNum));
-            return Result.success(ResultStatus.REDIRECT);
+            return success ? Result.success(ResultStatus.REDIRECT) : Result.failure(ResultStatus.INTERNAL_SERVER_ERROR);
         }
 //        if (localStatus.getSyncFlag()) { // 正在同步区块高度
 //            return Result.failure(ResultStatus.SYNC_PROCESS);

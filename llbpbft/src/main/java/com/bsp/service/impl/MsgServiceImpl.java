@@ -63,11 +63,32 @@ public class MsgServiceImpl implements MsgService {
      */
     @Override
     public void post(String url, Object data) {
+
         HttpHeaders headers = new HttpHeaders();
         headers.add("Content-Type", "application/json;charset=UTF-8");
         // 访问下一个节点
-        Objects.requireNonNull(restTemplate.postForObject(url,
-                new HttpEntity<>(JSON.toJSONString(data), headers), String.class));
+        try {
+            Objects.requireNonNull(restTemplate.postForObject(url,
+                    new HttpEntity<>(JSON.toJSONString(data), headers), String.class));
+        } catch (Exception e) {
+            log.error(e.toString());
+        }
+
+    }
+
+    @Override
+    public boolean testAndPost(String url, Object data) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Type", "application/json;charset=UTF-8");
+        // 访问下一个节点
+        try {
+            Objects.requireNonNull(restTemplate.postForObject(url,
+                    new HttpEntity<>(JSON.toJSONString(data), headers), String.class));
+            return true;
+        } catch (Exception e) {
+            log.error(e.toString());
+            return false;
+        }
     }
 
     /**
@@ -89,7 +110,7 @@ public class MsgServiceImpl implements MsgService {
      */
     @Override
     public void confirmHighBlock() {
-        blockService.pullLocalStatus();
+        blockService.pullLocalStatusWithoutView();
         Block highBlock = localStatus.getPreparedBlock(); // 当前最高区块
         highBlock.setFlag(null);
         String partialSig = signature.partialSign(highBlock); // 部分签名
@@ -102,7 +123,7 @@ public class MsgServiceImpl implements MsgService {
                 .url(serverConfig.getUrl())
                 .viewNumber(highBlock.getViewNumber()) // 上个视图
                 .build();
-        post(statusService.leader(viewNum)+"/message/PROPOSAL_VOTE", msg); // 给当前领导发送信息
+        post(statusService.leader(viewNum) + "/message/PROPOSAL_VOTE", msg); // 给当前领导发送信息
     }
 
     /**
@@ -114,7 +135,11 @@ public class MsgServiceImpl implements MsgService {
     @Override
     public void broadcastPost(List<String> urlList, Object data) {
         urlList.forEach(url -> {
-            post(url, data);
+            try {
+                post(url, data);
+            } catch (Exception e) {
+                log.error(e.toString());
+            }
         });
     }
 

@@ -37,8 +37,12 @@ public class StatusController {
     public Result<?> confirmHighBlock() {
         // 广播confirmHighBlock消息
         status.getHostList().forEach(hostUrl -> {
-            // 访问下一个节点
-            Objects.requireNonNull(restTemplate.getForObject(hostUrl + "/status/confirmHighBlock", Result.class));
+            try{
+                // 访问下一个节点
+                Objects.requireNonNull(restTemplate.getForObject(hostUrl + "/status/confirmHighBlock", Result.class));
+            } catch (Exception e){
+                log.error(e.toString());
+            }
         });
         return Result.success();
     }
@@ -46,7 +50,22 @@ public class StatusController {
     // getStatus
     @GetMapping("/getStatus")
     public Status getStatus() {
+
         return status;
     }
 
+    // incrViewNum
+    @GetMapping("/incrViewNum")
+    public Result<?> incrViewNum() {
+        // 广播confirmHighBlock消息
+        status.getHostList().forEach(hostUrl -> {
+            // 访问下一个节点
+            try{
+                Objects.requireNonNull(restTemplate.getForObject(hostUrl + "/status/incrViewNum", Result.class));
+            } catch (Exception e){
+                log.error(e.toString());
+            }
+        });
+        return Result.success();
+    }
 }
