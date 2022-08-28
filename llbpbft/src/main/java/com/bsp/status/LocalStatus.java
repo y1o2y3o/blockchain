@@ -34,7 +34,7 @@ public class LocalStatus {
      */
     private Map<Integer, List<String>> viewSyncHeightVoteMap = new ConcurrentHashMap<>();
 
-    private Blockchain blockchain;
+//    private Blockchain blockchain;
 
-    private volatile Boolean syncFlag; // 同步进程
+    private volatile Boolean syncFlag = false; // 同步进程
 }

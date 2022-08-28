@@ -13,6 +13,7 @@ import com.bsp.status.State;
 import com.bsp.web.*;
 import com.csp.web.Result;
 import com.csp.web.ResultStatus;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -28,6 +29,7 @@ import java.util.Objects;
  */
 @RestController
 @RequestMapping("/message")
+@Slf4j
 public class MessageController {
     @Autowired
     private LocalStatus localStatus;
@@ -99,6 +101,7 @@ public class MessageController {
     //领导监听客户端请求
     @PostMapping("/REQUEST")
     public Result<?> handleEditRequest(@RequestBody @Valid EditRequest req) {
+        log.info(localStatus.toString());
         if (!statusService.isCurrentLeader()) { // 不是领导
             return Result.failure(ResultStatus.NOT_LEADER);
         }

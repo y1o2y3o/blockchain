@@ -57,4 +57,5 @@ public interface StatusService {
      * @return
      */
     Boolean isLeader(String url, Integer viewNumber);
+
 }

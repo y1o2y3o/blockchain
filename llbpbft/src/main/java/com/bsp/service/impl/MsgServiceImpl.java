@@ -1,7 +1,16 @@
 package com.bsp.service.impl;
 
 import com.alibaba.fastjson.JSON;
+import com.bsp.conf.ServerConfig;
+import com.bsp.entity.Block;
+import com.bsp.enums.MessageEnum;
+import com.bsp.service.BlockService;
 import com.bsp.service.MsgService;
+import com.bsp.service.StatusService;
+import com.bsp.signatures.ThresholdSignature;
+import com.bsp.status.GlobalStatus;
+import com.bsp.status.LocalStatus;
+import com.bsp.web.Message;
 import com.csp.web.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +19,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.awt.*;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -25,6 +36,24 @@ import java.util.Objects;
 public class MsgServiceImpl implements MsgService {
     @Autowired
     private RestTemplate restTemplate;
+
+    @Autowired
+    private BlockService blockService;
+
+    @Autowired
+    private StatusService statusService;
+
+    @Autowired
+    private GlobalStatus globalStatus;
+
+    @Autowired
+    private LocalStatus localStatus;
+
+    @Autowired
+    private ThresholdSignature signature;
+
+    @Autowired
+    private ServerConfig serverConfig;
 
     /**
      * post 消息
@@ -43,6 +72,7 @@ public class MsgServiceImpl implements MsgService {
 
     /**
      * get 消息
+     *
      * @param fullUrl
      * @return
      */
@@ -53,4 +83,42 @@ public class MsgServiceImpl implements MsgService {
         // 访问下一个节点
         return Objects.requireNonNull(restTemplate.getForObject(fullUrl, Result.class));
     }
+
+    /**
+     * 给下个领导发送当前最高区块
+     */
+    @Override
+    public void confirmHighBlock() {
+        blockService.pullLocalStatus();
+        Block highBlock = localStatus.getPreparedBlock(); // 当前最高区块
+        String partialSig = signature.partialSign(highBlock); // 部分签名
+        int viewNum = localStatus.getCurViewNumber(); // 当前视图
+        // 构造消息
+        Message msg = Message.builder()
+                .type(MessageEnum.PROPOSAL_VOTE.toString()) // PROPOSAL_VOTE
+                .partialSig(partialSig)
+                .block(highBlock)
+                .url(serverConfig.getUrl())
+                .viewNumber(viewNum)
+                .build();
+        post(statusService.leader(viewNum + 1), msg); // 给下一个领导发送信息
+    }
+
+    /**
+     * 广播post
+     * @param urlList
+     * @param data
+     */
+    @Override
+    public void broadcastPost(List<String> urlList, Object data) {
+        urlList.forEach(url -> {
+            post(url, data);
+        });
+    }
+
+    @Override
+    public void broadcastGet(List<String> urlList) {
+        urlList.forEach(this::get);
+    }
+
 }

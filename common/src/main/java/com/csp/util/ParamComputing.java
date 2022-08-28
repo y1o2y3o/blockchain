@@ -11,4 +11,14 @@ public class ParamComputing {
         int f = n / 3 - (n % 3 == 0 ? 1 : 0);
         return f;
     }
+
+    /**
+     * 门限t
+     *
+     * @param n 总结点数
+     * @return
+     */
+    public static int getT(int n) {
+        return n - getF(n);
+    }
 }
