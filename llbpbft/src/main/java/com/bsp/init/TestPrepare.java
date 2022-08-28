@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
  */
 @Component
 @Slf4j
-@Order(2)
+@Order(3333)
 public class TestPrepare implements CommandLineRunner {
     @Autowired
     private RestTemplate restTemplate;

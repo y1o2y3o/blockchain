@@ -25,25 +25,25 @@ public class SignatureImpl implements Signature {
     private GlobalStatus globalStatus;
 
 
-    public static void main(String[] args) {
-        Pairing bp = PairingFactory.getPairing("a.properties");
-        Field G1 = bp.getG1();
-        Field Zr = bp.getZr();
-        Element g = G1.newRandomElement();
-        Element x = Zr.newRandomElement(); // 私钥
-        Element g_x = g.duplicate().powZn(x); // 公钥
-
-        // signing
-        String m = "message";
-        byte[] m_hash = Integer.toString(m.hashCode()).getBytes();
-        Element h = G1.newElementFromHash(m_hash, 0, m_hash.length);
-        Element sig = h.duplicate().powZn(x);
-
-        // verify
-        Element pl = bp.pairing(g, sig);
-        Element pr = bp.pairing(h, g_x);
-        System.out.println(pr.isEqual(pl));
-    }
+//    public static void main(String[] args) {
+//        Pairing bp = PairingFactory.getPairing("a.properties");
+//        Field G1 = bp.getG1();
+//        Field Zr = bp.getZr();
+//        Element g = G1.newRandomElement();
+//        Element x = Zr.newRandomElement(); // 私钥
+//        Element g_x = g.duplicate().powZn(x); // 公钥
+//
+//        // signing
+//        String m = "message";
+//        byte[] m_hash = Integer.toString(m.hashCode()).getBytes();
+//        Element h = G1.newElementFromHash(m_hash, 0, m_hash.length);
+//        Element sig = h.duplicate().powZn(x);
+//
+//        // verify
+//        Element pl = bp.pairing(g, sig);
+//        Element pr = bp.pairing(h, g_x);
+//        System.out.println(pr.isEqual(pl));
+//    }
 
     @Override
     public String sign(Object block) {
@@ -52,9 +52,9 @@ public class SignatureImpl implements Signature {
         // 哈希明文
         byte[] bytes = JSON.toJSONString(block).getBytes();
         // 明文映射为G1群中的元素
-        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length);
+        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length).duplicate();
         // 签名
-        Element sig = h.duplicate().powZn(secretKeys.getSK());
+        Element sig = h.duplicate().powZn(secretKeys.getSK().duplicate());
         return Base64.encodeBase64String(sig.toBytes());
     }
 
@@ -65,11 +65,11 @@ public class SignatureImpl implements Signature {
         // 哈希明文
         byte[] bytes = JSON.toJSONString(block).getBytes();
         // 明文映射为G1群中的元素
-        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length);
+        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length).duplicate();
         // 验证签名
-        Element pairing1 = pairing.pairing(secretKeys.getG(), secretKeys.getG1().newElementFromBytes(Base64.decodeBase64(sig)));
-        Element pairing2 = pairing.pairing(h, secretKeys.getPK());
-        return pairing1.isEqual(pairing2);
+        Element pairing1 = pairing.pairing(secretKeys.getG().duplicate(), secretKeys.getG1().newElementFromBytes(Base64.decodeBase64(sig)).duplicate());
+        Element pairing2 = pairing.pairing(h.duplicate(), secretKeys.getPK().duplicate());
+        return pairing1.duplicate().isEqual(pairing2.duplicate());
     }
 
 

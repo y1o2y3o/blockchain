@@ -2,6 +2,7 @@ package com.bsp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.bsp.entity.Block;
+import com.rsp.status.Status;
 import org.springframework.stereotype.Service;
 
 /**
@@ -58,4 +59,21 @@ public interface StatusService {
      */
     Boolean isLeader(String url, Integer viewNumber);
 
+    /**
+     * getStatus
+     * @return
+     */
+    Status getStatus();
+
+    /**
+     * updateGlobalStatus
+     * @param status
+     */
+    void updateGlobalStatus(Status status);
+
+    /**
+     * getStatus
+     * @return
+     */
+    void getAndUpdateGlobalStatus();
 }

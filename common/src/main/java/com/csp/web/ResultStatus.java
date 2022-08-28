@@ -43,6 +43,11 @@ public enum ResultStatus {
     SUCCESS(0, "成功"),
 
     /**
+     * 成功
+     */
+    REDIRECT(0, "正在转发给领导"),
+
+    /**
      * 试图切换
      */
     CHANGE_VIEW(-5, "验证不通过，视图切换"),

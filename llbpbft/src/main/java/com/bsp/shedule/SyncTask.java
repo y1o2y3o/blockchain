@@ -4,6 +4,7 @@ package com.bsp.shedule;
 import com.bsp.conf.ServerConfig;
 import com.bsp.entity.Block;
 import com.bsp.service.BlockService;
+import com.bsp.service.MsgService;
 import com.csp.constant.Cons;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -33,6 +34,9 @@ public class SyncTask {
     @Resource
     private BlockService blockService;
 
+    @Resource
+    private MsgService msgService;
+
     /**
      * 定时向注册中心心跳链接
      */
@@ -43,6 +47,16 @@ public class SyncTask {
         Objects.requireNonNull(restTemplate.getForObject(regUrl + "/heartBeat?url=" + serverConfig.getUrl(), Object.class));
         log.info("heartConn Task: 定时启动!");
     }
+
+//    /**
+//     * 定时向领导更新highblock
+//     */
+//    @Scheduled(fixedRate = Cons.COMMON_EXPIRED)
+//    @Async
+//    void sendHighBlockInfo() {
+//        msgService.confirmHighBlock();
+//        log.info("sendHighBlockInfo Task: 定时启动!");
+//    }
 
     /**
      * 测试程序

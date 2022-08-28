@@ -16,6 +16,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import sun.jvm.hotspot.runtime.VM;
+
+import java.util.Objects;
 
 /**
  * <p>
@@ -46,6 +49,7 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
                 .parentBlockId(highBlock.getBlockId())
                 .parentHash(highBlock.getHash())
                 .height(highBlock.getHeight() + 1)
+                .flag(FlagEnum.PREPARED.toString())
                 .build();
         String hash = Hashing.genHashDigest(newBlock);
         newBlock.setHash(hash);
@@ -65,6 +69,7 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
                 .parentBlockId(highBlock.getBlockId())
                 .parentHash(highBlock.getHash())
                 .height(highBlock.getHeight() + 1)
+                .flag(null)
                 .build();
         String hash = Hashing.genHashDigest(newBlock);
         newBlock.setHash(hash);
@@ -76,11 +81,11 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
         synchronized (LocalStatus.class) {
             Block parent1 = blockDao.selectById(block.getParentBlockId());
             Block parent2 = blockDao.selectById(parent1.getParentBlockId());
-            Block parent3 = blockDao.selectById(parent2.getParentBlockId());
+//            Block parent3 = blockDao.selectById(parent2.getParentBlockId());
             localStatus.setMaxBlockHeight(block.getHeight());
             localStatus.setPreparedBlock(block);
-            localStatus.setLockedBlock(parent2);
-            localStatus.setCommittedBlock(parent3);
+            localStatus.setLockedBlock(parent1);
+            localStatus.setCommittedBlock(parent2);
         }
     }
 
@@ -102,11 +107,9 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
                 return false;
             }
             // /判断𝑏𝑙𝑜𝑐𝑘的父区块𝑏𝑙𝑜𝑐𝑘Father.h𝑒𝑖𝑔h𝑡 > 𝑐𝑢𝑟𝐿𝑜𝑐𝑘𝑒𝑑𝐵𝑙𝑜𝑐𝑘.h𝑒𝑖𝑔h𝑡?
-            if (parent.getHeight() > localStatus.getLockedBlock().getHeight()) {
-                return true;
-            }
-            Block gParent = blockDao.selectById(parent.getParentBlockId());
-            return gParent != null && gParent.getParentBlockId().equals(localStatus.getLockedBlock().getBlockId());
+            return parent.getHeight() > localStatus.getLockedBlock().getHeight();
+//            Block gParent = blockDao.selectById(parent.getParentBlockId());
+//            return gParent != null && gParent.getParentBlockId().equals(localStatus.getLockedBlock().getBlockId());
         } catch (Exception e) {
             log.error(e.toString());
             return false;
@@ -136,7 +139,7 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
 
         int curMaxBlockHeight = preparedBlock.getHeight();
 
-        int curViewNum = preparedBlock.getViewNumber();
+        int curViewNum = preparedBlock.getViewNumber() + 1;
 
         localStatus.setCommittedBlock(committedBlock);
         localStatus.setPreparedBlock(preparedBlock);
@@ -159,5 +162,12 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
         saveOrUpdate(lockedBlock);
         saveOrUpdate(preparedBlock);
         pullLocalStatus();
+    }
+
+    @Override
+    public boolean blockEquals(Block block1, Block block2) {
+
+        return Objects.equals(block1.getBlockId(), block2.getBlockId())
+                && Objects.equals(block1.getContent(), block2.getContent());
     }
 }

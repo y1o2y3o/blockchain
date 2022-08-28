@@ -18,7 +18,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 @Data
 public class LocalStatus {
-    private volatile Integer curViewNumber;
+    private volatile Integer curViewNumber; // 当前视图
     private volatile Block lockedBlock; // 锁定的区块
     private volatile Block preparedBlock; // 最新准备的区块
     private volatile Block committedBlock; // 最新提交的区块
@@ -27,12 +27,12 @@ public class LocalStatus {
     /**
      * 视图-状态映射
      */
-    private Map<Integer, State> viewStateMap = new ConcurrentHashMap<>();
+    private Map<Integer, State> viewStateMap = new HashMap<>();
 
     /**
      * 视图SyncHeightVotes映射
      */
-    private Map<Integer, List<String>> viewSyncHeightVoteMap = new ConcurrentHashMap<>();
+    private Map<Integer, List<String>> viewSyncHeightVoteMap = new HashMap<>();
 
 //    private Blockchain blockchain;
 

@@ -64,16 +64,16 @@ public class KeyCenterServiceImpl implements KeyCenterService {
         G1 = bp.getG1();
         Zr = bp.getZr();
 
-        g = G1.newRandomElement();   // g
-        SK = Zr.newRandomElement(); // 系统主私钥
-        PK = g.duplicate().powZn(SK); // 系统主公钥
+        g = G1.newRandomElement().duplicate();   // g
+        SK = Zr.newRandomElement().duplicate(); // 系统主私钥
+        PK = g.duplicate().powZn(SK.duplicate()).duplicate(); // 系统主公钥
         n = status.getHostList().size(); // 总结点数
         t = n - ParamComputing.getF(n); // 至少获得t个签名，门限
         // 生成多项式
         coeff = new Element[t];
         coeff[0] = SK.duplicate();
         for (int j = 1; j < t; j++) {
-            coeff[j] = Zr.newRandomElement();
+            coeff[j] = Zr.newRandomElement().duplicate();
 
         }
 
@@ -83,24 +83,24 @@ public class KeyCenterServiceImpl implements KeyCenterService {
         for (int i = 1; i <= n; ++i) {
             // 计算分私钥xi = P(i)
             Element xi = P(i).duplicate();
-            X.add(xi);
+            X.add(xi.duplicate());
             // 计算分公钥vi
-            Element vi = g.duplicate().powZn(xi);
+            Element vi = g.duplicate().powZn(xi.duplicate()).duplicate();
             V.add(vi);
         }
 
         // 更新status
-        status.setG(Base64.encodeBase64String(g.toBytes()));
-        status.setPk(Base64.encodeBase64String(PK.toBytes()));
-        status.setSk(Base64.encodeBase64String(SK.toBytes()));
+        status.setG(Base64.encodeBase64String(g.duplicate().toBytes()));
+        status.setPk(Base64.encodeBase64String(PK.duplicate().toBytes()));
+        status.setSk(Base64.encodeBase64String(SK.duplicate().toBytes()));
         status.setN(n);
         status.setT(t);
         status.setHostSecretKeyMap(new HashMap<>());
         status.setHostPubKeyMap(new HashMap<>());
         for (int i = 0; i < n; ++i) {
             String hostUrl = status.getHostList().get(i);
-            byte[] partialSK = X.get(i).toBytes();
-            byte[] partialPK = V.get(i).toBytes();
+            byte[] partialSK = X.get(i).duplicate().toBytes();
+            byte[] partialPK = V.get(i).duplicate().toBytes();
             status.getHostSecretKeyMap().put(hostUrl, Base64.encodeBase64String(partialSK));
             status.getHostPubKeyMap().put(hostUrl, Base64.encodeBase64String(partialPK));
         }
@@ -120,10 +120,10 @@ public class KeyCenterServiceImpl implements KeyCenterService {
 
     // Z_p上的t-1多项式P(i)
     private Element P(int i) {
-        Element res = Zr.newZeroElement();
+        Element res = Zr.newZeroElement().duplicate();
         for (int j = 0; j < t; j++) {
-            res = res.add(coeff[j].duplicate().mul(BigInteger.valueOf(i).pow(j)));
+            res = res.duplicate().add(coeff[j].duplicate().mul(BigInteger.valueOf(i).pow(j)).duplicate());
         }
-        return res;
+        return res.duplicate();
     }
 }

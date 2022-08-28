@@ -2,6 +2,7 @@ package com.bsp.controller;
 
 import com.bsp.conf.ServerConfig;
 import com.bsp.entity.Block;
+import com.bsp.enums.FlagEnum;
 import com.bsp.enums.MessageEnum;
 import com.bsp.service.BlockService;
 import com.bsp.service.MsgService;
@@ -13,6 +14,7 @@ import com.bsp.status.State;
 import com.bsp.web.*;
 import com.csp.web.Result;
 import com.csp.web.ResultStatus;
+import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,8 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.validation.Valid;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * @author zksfromusa
@@ -53,47 +55,73 @@ public class MessageController {
     // 领导监听PROPOSAL_VOTE
     @PostMapping("/PROPOSAL_VOTE")
     public Result<?> handleProposalVote(@RequestBody @Valid Message msg) {
+        log.info(String.format("接收到%s消息，当前状态为%s", "PROPOSAL_VOTE", localStatus.toString()));
         if (!statusService.isCurrentLeader()) { // 不是领导
             return Result.failure(ResultStatus.NOT_LEADER);
         }
-        int curViewNum = localStatus.getCurViewNumber();
+        int curViewNum = localStatus.getCurViewNumber(); // 当前视图
         Map<Integer, State> viewStateMap = localStatus.getViewStateMap();
         // 获得当前视图的状态
-        State curState = viewStateMap.getOrDefault(curViewNum, State.builder().build());
-        viewStateMap.putIfAbsent(curViewNum, curState);
-        // 若部分签名验证通过
-        if (Objects.equals(msg.getViewNumber(), curViewNum - 1)
-                && thresholdSignature.partialValidate(msg.getBlock(), msg.getPartialSig(), msg.getUrl())) {
+        State curState = viewStateMap.getOrDefault(curViewNum, new State());
+        viewStateMap.put(curViewNum, curState);
+        Block curBlock = blockService.getById(msg.getBlock().getBlockId()); // 数据库中的block
+        // 若上一个视图的PROPOSAL_VOTE消息 且 部分签名验证通过
+        if (
+                blockService.blockEquals(curBlock, msg.getBlock())
+                        && Objects.equals(msg.getViewNumber() + 1, curViewNum)
+                        && thresholdSignature.partialValidate(msg.getBlock(), msg.getPartialSig(), msg.getUrl())
+        ) {
             // 收集部分签名
-            curState.getPartialSigList().add(msg.getPartialSig());
-        } else{
+            Map<Long, Set<String>> bidPsigMap = curState.getBidPsigsMap();
+            Set<String> pSigs = bidPsigMap.getOrDefault(msg.getBlock().getBlockId(), new HashSet<>());
+            bidPsigMap.put(msg.getBlock().getBlockId(), pSigs);
+            pSigs.add(msg.getPartialSig());
+        } else {
+            log.info("部分签名验证不通过!");
             return Result.failure(ResultStatus.BAD_REQUEST); // 签名验证不通过
         }
 
         // 如果收集满n-f个签名
         int n = statusService.curHostsNum();
         int f = statusService.curMaxFaultToleranceNum();
+        Pair<Long, Set<String>> highBlockSigs = getHighBlockSigs(curState.getBidPsigsMap()); // 获得最高区块以及签名
+        Block highBlock = blockService.getById(highBlockSigs.getKey()); // 获得最高区块
+        highBlock.setFlag(null);
+        List<String> sigs = new ArrayList<>(highBlockSigs.getValue()); // 最高区块的部分签名集合
         // 若收集满则聚合签名并更新curState
-        if (curState.getPartialSigList().size() >= n - f) {
-            curState.setCurAggrSig(thresholdSignature.aggrSign(msg.getBlock(), curState.getPartialSigList()));
-            // 若发现更高区块则更新当前最高区块
-            if (curState.getHighBlock() == null || msg.getBlock().getHeight() > curState.getHighBlock().getHeight()) {
-                curState.setHighBlock(msg.getBlock());
+        if (curState.getCurAggrSig() == null && sigs.size() >= n - f) {
+            synchronized (MessageController.class) {
+                if (curState.getCurAggrSig() == null && sigs.size() >= n - f) {
+                    curState.setCurAggrSig(thresholdSignature.aggrSign(highBlock, sigs)); // 最高区块的聚合签名
+                    curState.setPartialSigList(sigs); // 更新当前部分签名集合
+                    curState.setHighBlock(highBlock); // 更新当前最高区块
+                    Boolean verifyRes = thresholdSignature.aggrValidata(highBlock, curState.getCurAggrSig());
+
+                    log.info(String.format("aggrSign签名为:%s，区块已经确认", curState.getCurAggrSig()));
+                    log.info(String.format("aggrSign签名自我验证结果:%s", verifyRes));
+                }
             }
-            // 区块高度不一致
-            if(blockService.getById(curState.getHighBlock().getBlockId()) == null){
-                SyncMessage syncMessage = SyncMessage.builder()
-                        .viewNumber(curViewNum)
-                        .host(msg.getUrl())
-                        .blockId1(localStatus.getCommittedBlock().getBlockId())
-                        .blockId2(curState.getHighBlock().getBlockId()).build();
-                // 广播SYNC_HEIGHT消息
-                globalStatus.getHostList().forEach(host -> {
-                    if (!serverConfig.getUrl().equals(host)) { // 不包括自己
-                        msgService.post(host + "message/" + MessageEnum.SYNC_HEIGHT.toString(), syncMessage);
-                    }
-                });
-            }
+
+//            // 若发现更高区块则更新当前最高区块
+//            if (curState.getHighBlock() == null || msg.getBlock().getHeight() > curState.getHighBlock().getHeight()) {
+//                curState.setHighBlock(msg.getBlock());
+//            }
+//            // 区块高度不一致
+//            if (blockService.getById(curState.getHighBlock().getBlockId()) == null) {
+//                SyncMessage syncMessage = SyncMessage.builder()
+//                        .viewNumber(curViewNum)
+//                        .host(msg.getUrl())
+//                        .blockId1(localStatus.getCommittedBlock().getBlockId())
+//                        .blockId2(curState.getHighBlock().getBlockId()).build();
+//                // 广播SYNC_HEIGHT消息
+//                globalStatus.getHostList().forEach(host -> {
+//                    if (!serverConfig.getUrl().equals(host)) { // 不包括自己
+//                        msgService.post(host + "message/" + MessageEnum.SYNC_HEIGHT.toString(), syncMessage);
+//                    }
+//                });
+//            }
+
+            return Result.success();
         }
         return Result.success();
     }
@@ -101,90 +129,96 @@ public class MessageController {
     //领导监听客户端请求
     @PostMapping("/REQUEST")
     public Result<?> handleEditRequest(@RequestBody @Valid EditRequest req) {
-        log.info(localStatus.toString());
-        if (!statusService.isCurrentLeader()) { // 不是领导
-            return Result.failure(ResultStatus.NOT_LEADER);
-        }
-        if(localStatus.getSyncFlag()){ // 正在同步区块高度
-            return Result.failure(ResultStatus.SYNC_PROCESS);
-        }
+        log.info(String.format("接收到%s消息，当前状态为%s", "REQUEST", localStatus.toString()));
         int curViewNum = localStatus.getCurViewNumber();
+        if (!statusService.isCurrentLeader()) { // 不是领导
+            msgService.post(statusService.leader(curViewNum) + "/message/REQUEST", req);
+            log.info("正在将用户请求 " + req + " 转发给当前视图[" + curViewNum + "]领导 " + statusService.leader(curViewNum));
+            return Result.success(ResultStatus.REDIRECT);
+        }
+//        if (localStatus.getSyncFlag()) { // 正在同步区块高度
+//            return Result.failure(ResultStatus.SYNC_PROCESS);
+//        }
+
         Map<Integer, State> viewStateMap = localStatus.getViewStateMap();
         // 获得当前视图的状态
-        State curState = viewStateMap.getOrDefault(curViewNum, State.builder().build());
-        viewStateMap.putIfAbsent(curViewNum, curState);
+        State curState = viewStateMap.getOrDefault(curViewNum, new State());
+        viewStateMap.put(curViewNum, curState);
         if (curState.getHighBlock() == null) { // 尚未收到超过n-f个合法的投票
             return Result.failure(ResultStatus.NOT_READY);
         }
         // 对当前最高区块的聚合签名
         String curAggrSig = curState.getCurAggrSig();
-        Block newBlock = blockService.extendNewBlock(curState.getHighBlock(), curViewNum, req.getEditOptions(), curAggrSig);
-        blockService.update(newBlock); // 更新当前区块链状态
-        localStatus.setCurViewNumber(curViewNum + 1); // 视图编号递增
+        // 插入新区块
+        Block newBlock = blockService.genNewBlock(curState.getHighBlock(), curViewNum, req.getEditOptions(), curAggrSig);
+        //blockService.update(newBlock); // 更新当前区块链状态
         // 广播PROPOSAL消息
         globalStatus.getHostList().forEach(host -> {
-            if (!serverConfig.getUrl().equals(host)) { // 不包括自己
-                msgService.post(host + "message/" + MessageEnum.PROPOSAL.toString(),
-                        Message.builder()
-                                .block(newBlock)
-                                .viewNumber(curViewNum)
-                                .url(serverConfig.getUrl())
-                                .build());
-            }
+            msgService.post(host + "/message/" + MessageEnum.PROPOSAL.toString(),
+                    Message.builder()
+                            .block(newBlock)
+                            .viewNumber(curViewNum)
+                            .url(serverConfig.getUrl())
+                            .build());
         });
         return Result.success();
     }
 
-    // 副本监听PROPOSAL
+    // 副本/领导监听PROPOSAL(当前领导发来的)
     @PostMapping("/PROPOSAL")
     public Result<?> handleProposal(@RequestBody @Valid Message msg) {
-        if (!statusService.isCurrentReplica()) { // 不是副本
-            return Result.failure(ResultStatus.NOT_REPLICA);
-        }
-        if (!statusService.leader(msg.getViewNumber()).equals(msg.getUrl())) { // 冒充领导
+        log.info(String.format("接收到%s消息，当前状态为%s", "PROPOSAL", localStatus.toString()));
+        // 冒充领导
+        if (!statusService.leader(msg.getViewNumber()).equals(msg.getUrl())) {
             return Result.failure(ResultStatus.BAD_REQUEST);
         }
 
-        int curViewNum = localStatus.getCurViewNumber();
+        int curViewNum = localStatus.getCurViewNumber(); // 当前视图
         Map<Integer, State> viewStateMap = localStatus.getViewStateMap();
         // 获得当前视图的状态
-        State curState = viewStateMap.getOrDefault(curViewNum, State.builder().build());
-        viewStateMap.putIfAbsent(curViewNum, curState);
+        State curState = viewStateMap.getOrDefault(curViewNum, new State());
+        viewStateMap.put(curViewNum, curState);
 
         // 如果聚合签名合法
-        if (thresholdSignature.aggrValidata(blockService.getParentBlock(msg.getBlock()), msg.getBlock().getAggrSig())) {
+        Block parentBlock = blockService.getParentBlock(msg.getBlock());
+        parentBlock.setFlag(null);
+        String aggrSig = msg.getBlock().getAggrSig();
+        Boolean aggrValidateRes = thresholdSignature.aggrValidata(parentBlock, aggrSig); // 聚合签名认证结果
+        log.info(String.format("区块:%s\n聚合签名认证结果：%s", parentBlock, aggrValidateRes));
+        if (thresholdSignature.aggrValidata(parentBlock, aggrSig)) {
             // 如果区块能够安全插入
             if (blockService.isSafeNewBlock(msg.getBlock())) {
                 Block newBlock = msg.getBlock();
                 // 对newBlock部分签名
                 String pSig = thresholdSignature.partialSign(newBlock);
-                blockService.save(newBlock); // 插入区块
-                blockService.update(newBlock); // 更新本地区块链状态
-                // 对下一个视图的领导发送投票消息，其中包含该区块的部分签名
-                msgService.post(statusService.leader(curViewNum + 1) + "message/" + MessageEnum.PROPOSAL_VOTE.toString(),
-                        Message.builder()
-                                .block(newBlock)
-                                .viewNumber(curViewNum + 1)
-                                .url(serverConfig.getUrl())
-                                .partialSig(pSig)
-                                .build());
-                localStatus.setCurViewNumber(curViewNum + 1); // 视图编号递增
+                blockService.insertAndUpdateNewBlock(newBlock);
+                log.info(String.format("区块%s\n\t成功上链", newBlock));
+                // 视图编号递增
+                localStatus.setCurViewNumber(curViewNum + 1);
+//                // 对下一个视图的领导发送投票消息，其中包含该区块的部分签名
+//                msgService.post(statusService.leader(curViewNum + 1) + "/message/" + MessageEnum.PROPOSAL_VOTE.toString(), // 下一个视图的领导
+//                        Message.builder()
+//                                .block(newBlock)
+//                                .viewNumber(curViewNum) // 原来的视图
+//                                .url(serverConfig.getUrl())
+//                                .partialSig(pSig)
+//                                .build());
                 return Result.success();
             }
         }
-        // 聚合签名不通过，切换视图
-        Block preparedBlock = localStatus.getPreparedBlock();
-        String pSig = thresholdSignature.partialSign(preparedBlock);
-        // 向下一个视图的领导节点发送切换视图消息，包含当前准备区块以及签名
-        msgService.post(statusService.leader(curViewNum + 1) + "message/" + MessageEnum.CHANGE_VIEW.toString(),
-                Message.builder()
-                        .type(MessageEnum.CHANGE_VIEW.toString())
-                        .block(preparedBlock)
-                        .viewNumber(curViewNum + 1)
-                        .url(serverConfig.getUrl())
-                        .partialSig(pSig)
-                        .build());
-        localStatus.setCurViewNumber(curViewNum + 1); // 视图编号递增
+//        // 聚合签名不通过，切换视图
+//        Block preparedBlock = localStatus.getPreparedBlock();
+//        String pSig = thresholdSignature.partialSign(preparedBlock);
+//        // 向下一个视图的领导节点发送切换视图消息，包含当前准备区块以及签名
+//        msgService.post(statusService.leader(curViewNum + 1) + "message/" + MessageEnum.CHANGE_VIEW.toString(),
+//                Message.builder()
+//                        .type(MessageEnum.CHANGE_VIEW.toString())
+//                        .block(preparedBlock)
+//                        .viewNumber(curViewNum + 1)
+//                        .url(serverConfig.getUrl())
+//                        .partialSig(pSig)
+//                        .build());
+//        localStatus.setCurViewNumber(curViewNum + 1); // 视图编号递增
         return Result.failure(ResultStatus.CHANGE_VIEW);
     }
 
@@ -199,8 +233,8 @@ public class MessageController {
             //;
             Map<Integer, State> viewStateMap = localStatus.getViewStateMap();
             // 获得指定的视图的状态
-            State viewState = viewStateMap.getOrDefault(msg.getViewNumber(), State.builder().build());
-            viewStateMap.putIfAbsent(msg.getViewNumber(), viewState);
+            State viewState = viewStateMap.getOrDefault(msg.getViewNumber(), new State());
+            viewStateMap.put(msg.getViewNumber(), viewState);
             viewState.getPartialSigList().add(msg.getPartialSig());
             // 如果收集满n-f个签名
             int n = statusService.curHostsNum();
@@ -219,5 +253,22 @@ public class MessageController {
         return Result.success();
     }
 
-
+    /**
+     * 获取getHighBlockSigs
+     *
+     * @param bidPsigsMap
+     * @return
+     */
+    private Pair<Long, Set<String>> getHighBlockSigs(Map<Long, Set<String>> bidPsigsMap) {
+        int maxSize = bidPsigsMap.values().stream()
+                .map(Set::size)
+                .max((s1, s2) -> Integer.compare(s2, s1))
+                .orElse(0);
+        Map.Entry<Long, Set<String>> res = bidPsigsMap.entrySet().stream()
+                .filter(entry -> entry.getValue().size() == maxSize)
+                .findAny()
+                .orElse(null);
+        assert res != null;
+        return new Pair<>(res.getKey(), new HashSet<>(res.getValue()));
+    }
 }

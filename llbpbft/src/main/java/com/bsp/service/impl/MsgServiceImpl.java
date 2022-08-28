@@ -85,12 +85,13 @@ public class MsgServiceImpl implements MsgService {
     }
 
     /**
-     * 给下个领导发送当前最高区块
+     * 给当前领导发送当前最高区块
      */
     @Override
     public void confirmHighBlock() {
         blockService.pullLocalStatus();
         Block highBlock = localStatus.getPreparedBlock(); // 当前最高区块
+        highBlock.setFlag(null);
         String partialSig = signature.partialSign(highBlock); // 部分签名
         int viewNum = localStatus.getCurViewNumber(); // 当前视图
         // 构造消息
@@ -99,13 +100,14 @@ public class MsgServiceImpl implements MsgService {
                 .partialSig(partialSig)
                 .block(highBlock)
                 .url(serverConfig.getUrl())
-                .viewNumber(viewNum)
+                .viewNumber(highBlock.getViewNumber()) // 上个视图
                 .build();
-        post(statusService.leader(viewNum + 1), msg); // 给下一个领导发送信息
+        post(statusService.leader(viewNum)+"/message/PROPOSAL_VOTE", msg); // 给当前领导发送信息
     }
 
     /**
      * 广播post
+     *
      * @param urlList
      * @param data
      */

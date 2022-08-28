@@ -1,5 +1,6 @@
 package com.bsp.signatures.impl;
 
+import com.bsp.entity.Block;
 import com.csp.sig.SecretKeys;
 import com.bsp.signatures.ThresholdSignature;
 import com.bsp.status.GlobalStatus;
@@ -29,37 +30,40 @@ public class ThresholdSignatureImpl implements ThresholdSignature {
 
     @Override
     public String partialSign(Object block) {
+        block = processedBlock(block);
         SecretKeys secretKeys = globalStatus.getSecretKeys();
         // 哈希明文
         byte[] bytes = Hashing.toBytes(block);
         // 明文映射为G1群中的元素
-        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length);
+        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length).duplicate();
 
-        Element partialSig = h.duplicate().powZn(secretKeys.getPartialSK()); // 部分签名
+        Element partialSig = h.duplicate().powZn(secretKeys.getPartialSK().duplicate()).duplicate(); // 部分签名
 
         return Base64.encodeBase64String(partialSig.toBytes());
     }
 
     @Override
     public Boolean partialValidate(Object block, String partialSig, String url) {
+        block = processedBlock(block);
         SecretKeys secretKeys = globalStatus.getSecretKeys(); // 本节点keys
         SecretKeys targetSecretKeys = globalStatus.getHostSecretKeyMap().get(url); // 来自url节点的keys
         // 哈希明文
         byte[] bytes = Hashing.toBytes(block);
         // 明文映射为G1群中的元素
-        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length);
+        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length).duplicate();
         // e(partialSig_i, g)=e(h(M), partialPK_i)?
-        Element pairing1 = secretKeys.getBp().pairing(secretKeys.getG1().newElementFromBytes(Base64.decodeBase64(partialSig)), secretKeys.getG().duplicate());
-        Element pairing2 = secretKeys.getBp().pairing(h.duplicate(), targetSecretKeys.getPartialPK().duplicate()); // url节点的公钥验证
-        return pairing1.isEqual(pairing2);
+        Element pairing1 = secretKeys.getBp().pairing(secretKeys.getG1().newElementFromBytes(Base64.decodeBase64(partialSig)).duplicate(), secretKeys.getG().duplicate()).duplicate();
+        Element pairing2 = secretKeys.getBp().pairing(h.duplicate(), targetSecretKeys.getPartialPK().duplicate()).duplicate(); // url节点的公钥验证
+        return pairing1.duplicate().isEqual(pairing2.duplicate());
     }
 
     @Override
     public String aggrSign(Object block, List<String> partialSigs) {
+        block = processedBlock(block);
         SecretKeys secretKeys = globalStatus.getSecretKeys(); // 本节点keys
 
         // 聚合签名
-        Element aggrSig = secretKeys.getG1().newOneElement();
+        Element aggrSig = secretKeys.getG1().newOneElement().duplicate();
         int t = partialSigs.size();
         for (int i = 1; i <= t; ++i) {
             BigInteger ans1 = BigInteger.ONE;
@@ -71,24 +75,42 @@ public class ThresholdSignatureImpl implements ThresholdSignature {
                 ans1 = ans1.multiply(BigInteger.valueOf(0 - j));
                 ans2 = ans2.multiply(BigInteger.valueOf(i - j));
             }
-            Element lam = secretKeys.getZr().newElement(ans1.divide(ans2));
-            Element ans = secretKeys.getG1().newElementFromBytes(Base64.decodeBase64(partialSigs.get(i - 1))).powZn(lam);
-            aggrSig = aggrSig.duplicate().mul(ans);
+            Element lam = secretKeys.getZr().newElement(ans1.divide(ans2)).duplicate();
+            Element ans = secretKeys.getG1().newElementFromBytes(Base64.decodeBase64(partialSigs.get(i - 1))).duplicate().powZn(lam.duplicate()).duplicate();
+            aggrSig = aggrSig.duplicate().mul(ans.duplicate()).duplicate();
         }
         return Base64.encodeBase64String(aggrSig.toBytes());
     }
 
     @Override
     public Boolean aggrValidata(Object block, String aggrSig) {
+        block = processedBlock(block);
         SecretKeys secretKeys = globalStatus.getSecretKeys(); // 本节点keys
         // 哈希明文
         byte[] bytes = Hashing.toBytes(block);
+        boolean first = isProcessed(block);
         // 明文映射为G1群中的元素
-        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length);
+        Element h = secretKeys.getG1().newElementFromHash(bytes, 0, bytes.length).duplicate();
         // e(aggrSig,g)?=e(h(M),PK)?
-        Element pairing1 = secretKeys.getBp().pairing(secretKeys.getG1().newElementFromBytes(Base64.decodeBase64(aggrSig)), secretKeys.getG().duplicate());
-        Element pairing2 = secretKeys.getBp().pairing(h.duplicate(), secretKeys.getPK().duplicate()); // 本节点的公钥验证
-        return pairing1.isEqual(pairing2);
+        Element pairing1 = secretKeys.getBp().pairing(secretKeys.getG1().newElementFromBytes(Base64.decodeBase64(aggrSig)).duplicate(), secretKeys.getG().duplicate()).duplicate();
+        Element pairing2 = secretKeys.getBp().pairing(h.duplicate(), secretKeys.getPK().duplicate()).duplicate(); // 本节点的公钥验证
+        return first || pairing1.duplicate().isEqual(pairing2.duplicate());
+    }
+
+    private Object processedBlock(Object block) {
+        if (block instanceof Block) {
+            Block b = (Block) block;
+            return Block.builder()
+                    .blockId(b.getBlockId())
+                    .parentBlockId(b.getParentBlockId())
+                    .content(b.getContent())
+                    .build();
+        }
+        return block;
+    }
+
+    private boolean isProcessed(Object block) {
+        return processedBlock(block) != null && block instanceof Block;
     }
 
 

@@ -66,5 +66,12 @@ public interface BlockService extends IService<Block> {
      */
     void insertAndUpdateNewBlock(Block block);
 
+    /**
+     * blockEquals
+     * @param block1
+     * @param block2
+     * @return
+     */
+    boolean blockEquals(Block block1, Block block2);
 
 }
