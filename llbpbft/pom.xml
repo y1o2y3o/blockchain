@@ -1,0 +1,193 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>org.example</groupId>
+    <artifactId>llbpbft</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <parent>
+        <artifactId>blockchain</artifactId>
+        <groupId>org.example</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.mybatis.spring.boot</groupId>
+            <artifactId>mybatis-spring-boot-starter</artifactId>
+            <version>${mybatis-spring-boot-starter.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <scope>provided</scope>
+        </dependency>
+
+        <!--添加MySql依赖-->
+        <dependency>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+        </dependency>
+
+        <!--添加JDBC依赖-->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>1.2.71</version>
+        </dependency>
+
+        <!--        mybatis plus-->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-boot-starter</artifactId>
+            <version>3.4.3</version>
+        </dependency>
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-generator</artifactId>
+            <version>3.4.1</version>
+        </dependency>
+
+        <!--        JSR303 数据校验-->
+        <!-- https://mvnrepository.com/artifact/javax.validation/validation-api -->
+        <dependency>
+            <groupId>javax.validation</groupId>
+            <artifactId>validation-api</artifactId>
+            <version>2.0.1.Final</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.hibernate.validator/hibernate-validator -->
+        <dependency>
+            <groupId>org.hibernate.validator</groupId>
+            <artifactId>hibernate-validator</artifactId>
+            <version>6.1.6.Final</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-configuration-processor</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!--    引入门限签名jpbc包    -->
+        <dependency>
+            <groupId>it.unisa</groupId>
+            <artifactId>jpbc-api</artifactId>
+            <version>2.0.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/jpbc-api-2.0.0.jar</systemPath>
+        </dependency>
+
+        <dependency>
+            <groupId>it.unisa</groupId>
+            <artifactId>jpbc-plaf</artifactId>
+            <version>2.0.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/jpbc-plaf-2.0.0.jar</systemPath>
+        </dependency>
+        <!--公共类-->
+        <dependency>
+            <groupId>org.example</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <!--        regcenter类-->
+        <dependency>
+            <groupId>org.example</groupId>
+            <artifactId>regcenter</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+    </dependencies>
+
+    <!--    打包配置-->
+    <build>
+        <finalName>llbPBFT</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <includeSystemScope>true</includeSystemScope>
+                    <fork>true</fork>
+                    <excludes>
+                        <exclude>
+                            <groupId>org.springframework.boot</groupId>
+                            <artifactId>spring-boot-configuration-processor</artifactId>
+                        </exclude>
+                    </excludes>
+                </configuration>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!--            &lt;!&ndash;使用docker-maven-plugin插件&ndash;&gt;-->
+            <!--            <plugin>-->
+            <!--                <groupId>com.spotify</groupId>-->
+            <!--                <artifactId>docker-maven-plugin</artifactId>-->
+            <!--                <version>1.0.0</version>-->
+            <!--                <configuration>-->
+            <!--                    &lt;!&ndash;指定生成的镜像名&ndash;&gt;-->
+            <!--                    <imageName>${project.artifactId}</imageName>-->
+            <!--                    &lt;!&ndash; 指定 Dockerfile 路径 , 根据实际情况改动! ${project.basedir}：项目根路径&ndash;&gt;-->
+            <!--                    <dockerDirectory>${basedir}/Dockerfile</dockerDirectory>-->
+            <!--                    <imageTags>-->
+            <!--                        <imageTag>${project.version}</imageTag>-->
+            <!--                    </imageTags>-->
+            <!--                    &lt;!&ndash;指定远程 docker api地址 ,此举目的是将构建好的镜像推送至远程的Docker服务器 ,  前提是服务器开启远程连接 &ndash;&gt;-->
+            <!--                    <dockerHost>http://127.0.0.0:2375</dockerHost>-->
+            <!--                    &lt;!&ndash; 这里是复制 jar 包到 docker 容器指定目录配置 &ndash;&gt;-->
+            <!--                    <resources>-->
+            <!--                        <resource>-->
+            <!--                            <targetPath>/</targetPath>-->
+            <!--                            &lt;!&ndash;jar 包所在的路径  此处配置的 即对应 target 目录&ndash;&gt;-->
+            <!--                            <directory>${project.build.directory}</directory>-->
+            <!--                            &lt;!&ndash;用于指定需要复制的文件 需要包含的 jar包 ，这里对应的是 Dockerfile中添加的文件名　&ndash;&gt;-->
+            <!--                            <include>${project.build.finalName}.jar</include>-->
+            <!--                        </resource>-->
+            <!--                    </resources>-->
+            <!--                </configuration>-->
+            <!--                &lt;!&ndash;将插件绑定在某个phase执行&ndash;&gt;-->
+            <!--                <executions>-->
+            <!--                    <execution>-->
+            <!--                        <id>build-image</id>-->
+            <!--                        &lt;!&ndash;用户只需执行mvn package ，就会自动执行mvn docker:build&ndash;&gt;-->
+            <!--                        <phase>package</phase>-->
+            <!--                        <goals>-->
+            <!--                            <goal>build</goal>-->
+            <!--                        </goals>-->
+            <!--                    </execution>-->
+            <!--                </executions>-->
+            <!--            </plugin>-->
+
+        </plugins>
+    </build>
+    <!--    <build>-->
+    <!--        <plugins>-->
+
+    <!--        </plugins>-->
+    <!--    </build>-->
+</project>
