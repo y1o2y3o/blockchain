@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.extension.service.IService;
 import com.bsp.entity.Block;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 /**
  * <p>
  * Block服务
@@ -79,4 +81,17 @@ public interface BlockService extends IService<Block> {
      */
     boolean blockEquals(Block block1, Block block2);
 
+    /**
+     * getFollowingBlocksAfter 获得大于height高度的所有区块列表
+     * @param height
+     * @return
+     */
+    List<Block> getFollowingBlocksAfter(Integer height);
+
+    /**
+     *  getFollowingOptionsListAfter
+     * @param height
+     * @return
+     */
+    List<String> getFollowingOptionsListAfter(Integer height);
 }

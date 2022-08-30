@@ -30,6 +30,12 @@ public interface MsgService {
     boolean testAndPost(String url, Object data);
 
     /**
+     * testAndGet
+     *
+     */
+    boolean testAndGet(String fullUrl);
+
+    /**
      * get 消息
      *
      * @param fullUrl

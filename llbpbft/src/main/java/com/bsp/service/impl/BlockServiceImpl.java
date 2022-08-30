@@ -18,7 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import sun.jvm.hotspot.runtime.VM;
 
+import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -200,5 +202,23 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
 
         return Objects.equals(block1.getBlockId(), block2.getBlockId())
                 && Objects.equals(block1.getContent(), block2.getContent());
+    }
+
+    @Override
+    public List<Block> getFollowingBlocksAfter(Integer height) {
+        List<Block> blockList = blockDao.selectList(
+                Wrappers.lambdaQuery(Block.class)
+//                        .eq(Block::getFlag, FlagEnum.COMMITTED.toString())
+                        .gt(Block::getHeight, height)
+                        .orderByAsc(Block::getHeight)
+        );
+        return blockList;
+    }
+
+    @Override
+    public List<String> getFollowingOptionsListAfter(Integer height) {
+        List<Block> blockList = getFollowingBlocksAfter(height);
+        List<String> opList = blockList.stream().map(Block::getContent).collect(Collectors.toList());
+        return opList;
     }
 }

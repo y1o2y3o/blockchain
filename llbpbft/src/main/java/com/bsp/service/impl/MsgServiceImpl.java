@@ -91,6 +91,18 @@ public class MsgServiceImpl implements MsgService {
         }
     }
 
+    @Override
+    public boolean testAndGet(String fullUrl) {
+        try {
+            Objects.requireNonNull(restTemplate.getForObject(fullUrl, Result.class));
+            return true;
+        } catch (Exception e) {
+            log.error(fullUrl);
+            log.error(e.toString());
+            return false;
+        }
+    }
+
     /**
      * get 消息
      *

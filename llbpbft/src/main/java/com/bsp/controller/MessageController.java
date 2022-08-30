@@ -17,12 +17,13 @@ import com.csp.web.ResultStatus;
 import javafx.util.Pair;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -127,14 +128,15 @@ public class MessageController {
     }
 
     //领导监听客户端请求
-    @PostMapping("/REQUEST")
-    public Result<?> handleEditRequest(@RequestBody @Valid EditRequest req) {
+    @GetMapping("/REQUEST")
+    public Result<?> handleEditRequest(@RequestParam("editOptions") String editOptions) throws UnsupportedEncodingException {
+        editOptions = URLDecoder.decode(editOptions);
         msgService.get(serverConfig.getRegUrl() + "/status/confirmHighBlock"); // 触发投票机制
-        log.info(String.format("接收到%s消息，当前状态为%s", "REQUEST", localStatus.toString()));
+        log.info(String.format("接收到%s消息内容:%s，当前状态为%s", "REQUEST", editOptions,localStatus.toString()));
         int curViewNum = localStatus.getCurViewNumber();
         if (!statusService.isCurrentLeader()) { // 不是领导
-            boolean success = msgService.testAndPost(statusService.leader(curViewNum) + "/message/REQUEST", req);
-            log.info("正在将用户请求 " + req + " 转发给当前视图[" + curViewNum + "]领导 " + statusService.leader(curViewNum));
+            boolean success = msgService.testAndGet(statusService.leader(curViewNum) + "/message/REQUEST?editOptions=" + URLEncoder.encode(editOptions));
+            log.info("正在将用户请求 " + editOptions + " 转发给当前视图[" + curViewNum + "]领导 " + statusService.leader(curViewNum));
             return success ? Result.success(ResultStatus.REDIRECT) : Result.failure(ResultStatus.INTERNAL_SERVER_ERROR);
         }
 //        if (localStatus.getSyncFlag()) { // 正在同步区块高度
@@ -151,7 +153,7 @@ public class MessageController {
         // 对当前最高区块的聚合签名
         String curAggrSig = curState.getCurAggrSig();
         // 插入新区块
-        Block newBlock = blockService.genNewBlock(curState.getHighBlock(), curViewNum, req.getEditOptions(), curAggrSig);
+        Block newBlock = blockService.genNewBlock(curState.getHighBlock(), curViewNum, editOptions, curAggrSig);
         //blockService.update(newBlock); // 更新当前区块链状态
         // 广播PROPOSAL消息
         globalStatus.getHostList().forEach(host -> {
@@ -252,6 +254,13 @@ public class MessageController {
             }
         }
         return Result.success();
+    }
+
+    // 客户端查询接口
+    @GetMapping("/GET")
+    public Result<?> getEditResponse(@RequestParam("curHeight") @NotNull Integer curHeight) {
+        List<String> opList = blockService.getFollowingOptionsListAfter(curHeight);
+        return Result.success(opList);
     }
 
     /**
