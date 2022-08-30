@@ -22,6 +22,7 @@ import org.springframework.web.client.RestTemplate;
 import java.awt.*;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * <p>
@@ -136,6 +137,25 @@ public class MsgServiceImpl implements MsgService {
                 .viewNumber(highBlock.getViewNumber()) // 上个视图
                 .build();
         post(statusService.leader(viewNum) + "/message/PROPOSAL_VOTE", msg); // 给当前领导发送信息
+    }
+
+    @Override
+    public void confirmHighBlock2() {
+        blockService.pullLocalStatusWithoutView();
+        Block highBlock = localStatus.getPreparedBlock(); // 当前最高区块
+        highBlock.setFlag(null);
+        String partialSig = signature.partialSign(highBlock); // 部分签名
+        int viewNum = localStatus.getCurViewNumber(); // 当前视图
+        // 构造消息
+        Message msg = Message.builder()
+                .type(MessageEnum.PROPOSAL_VOTE.toString()) // PROPOSAL_VOTE
+                .partialSig(partialSig)
+                .block(highBlock)
+                .url(serverConfig.getUrl())
+                .viewNumber(highBlock.getViewNumber()) // 上个视图
+                .build();
+        List<String> urlList = globalStatus.getHostList().stream().map(url -> url + "/pbft/message/COMMIT").collect(Collectors.toList());
+        broadcastPost(urlList, msg); // 给当所有副本节点发送信息
     }
 
     /**

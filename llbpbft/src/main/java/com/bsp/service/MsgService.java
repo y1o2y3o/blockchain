@@ -49,6 +49,12 @@ public interface MsgService {
     void confirmHighBlock();
 
     /**
+     * 将当前最高区块发送给所有节点
+     *
+     */
+    void confirmHighBlock2();
+
+    /**
      * 广播post
      *
      */

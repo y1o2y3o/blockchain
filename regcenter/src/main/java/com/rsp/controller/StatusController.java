@@ -47,6 +47,21 @@ public class StatusController {
         return Result.success();
     }
 
+    // confirmHighBlock2
+    @GetMapping("/confirmHighBlock2")
+    public Result<?> confirmHighBlock2() {
+        // 广播confirmHighBlock消息
+        status.getHostList().forEach(hostUrl -> {
+            try{
+                // 访问下一个节点
+                Objects.requireNonNull(restTemplate.getForObject(hostUrl + "/status/confirmHighBlock2", Result.class));
+            } catch (Exception e){
+                log.error(e.toString());
+            }
+        });
+        return Result.success();
+    }
+
     // getStatus
     @GetMapping("/getStatus")
     public Status getStatus() {

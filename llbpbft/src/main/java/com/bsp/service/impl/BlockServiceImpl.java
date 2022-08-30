@@ -136,7 +136,7 @@ public class BlockServiceImpl extends ServiceImpl<BlockDao, Block> implements Bl
         Block preparedBlock = blockDao.selectList(
                 Wrappers.lambdaQuery(Block.class)
                         .eq(Block::getFlag, FlagEnum.PREPARED.toString())
-                        .eq(Block::getParentBlockId, lockedBlock.getBlockId())
+//                        .eq(Block::getParentBlockId, lockedBlock.getBlockId())
         ).get(0);
 
         int curMaxBlockHeight = preparedBlock.getHeight();

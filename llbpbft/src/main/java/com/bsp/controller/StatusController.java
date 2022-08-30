@@ -68,6 +68,13 @@ public class StatusController {
         return Result.success();
     }
 
+    // pbft获取当前highblock信息
+    @GetMapping("/confirmHighBlock2")
+    public Result<?> getHignblockInfo2() {
+        msgService.confirmHighBlock2(); // 给下一个领导发送highblock信息
+        return Result.success();
+    }
+
     // incrViewNum + 1
     @GetMapping("/incrViewNum")
     public Result<?> incrViewNum() {

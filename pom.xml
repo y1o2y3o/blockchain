@@ -29,6 +29,7 @@
         <module>llbpbft</module>
         <module>regcenter</module>
         <module>common</module>
+        <module>tpbft</module>
     </modules>
 
 
