@@ -65,4 +65,10 @@ public interface MsgService {
      *
      */
     void broadcastGet(List<String> urlList);
+
+    /**
+     * syncBlockHeight
+     *
+     */
+    void syncBlockHeight();
 }

@@ -11,6 +11,7 @@ import com.bsp.signatures.ThresholdSignature;
 import com.bsp.status.GlobalStatus;
 import com.bsp.status.LocalStatus;
 import com.bsp.web.Message;
+import com.bsp.web.SyncHeightRespose;
 import com.csp.web.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,8 +21,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.awt.*;
+import java.util.*;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
@@ -178,6 +179,25 @@ public class MsgServiceImpl implements MsgService {
     @Override
     public void broadcastGet(List<String> urlList) {
         urlList.forEach(this::get);
+    }
+
+    @Override
+    public void syncBlockHeight() {
+        List<String> urlList = globalStatus.getHostList().stream()
+                .filter(url -> !serverConfig.getUrl().equals(url))
+                .map(url -> url + "/syncHeightMessage/SYNC_HEIGHT?height=" + (localStatus.getMaxBlockHeight() - 2))
+                .collect(Collectors.toList());
+        List<SyncHeightRespose> respList = urlList.stream()
+                .map(url -> restTemplate.getForObject(url, SyncHeightRespose.class))
+                .filter(resp -> resp != null && resp.getBlockList() != null)
+                .collect(Collectors.toList());
+        log.info(String.format("下载区块同步列表完成, size=" + respList.size()));
+        List<Block> blockList = respList.stream()
+                .flatMap(resp -> resp.getBlockList().stream())
+                .distinct()
+                .collect(Collectors.toList());
+        // 批量存储
+        blockService.saveOrUpdateBatch(blockList);
     }
 
 }

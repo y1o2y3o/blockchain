@@ -60,12 +60,21 @@ public class MessageController {
         if (!statusService.isCurrentLeader()) { // 不是领导
             return Result.failure(ResultStatus.NOT_LEADER);
         }
+        Block curBlock = blockService.getById(msg.getBlock().getBlockId()); // 数据库中的block
+        // 区块高度不一致
+        if (curBlock == null) {
+            log.info(String.format("区块高度不一致,准备同步..."));
+            msgService.syncBlockHeight();
+            blockService.pullLocalStatus();
+            log.info(String.format("区块同步完成"));
+            curBlock = blockService.getById(msg.getBlock().getBlockId()); // 数据库中的block
+        }
         int curViewNum = localStatus.getCurViewNumber(); // 当前视图
         Map<Integer, State> viewStateMap = localStatus.getViewStateMap();
         // 获得当前视图的状态
         State curState = viewStateMap.getOrDefault(curViewNum, new State());
         viewStateMap.put(curViewNum, curState);
-        Block curBlock = blockService.getById(msg.getBlock().getBlockId()); // 数据库中的block
+
         // 若上一个视图的PROPOSAL_VOTE消息 且 部分签名验证通过
         if (
                 blockService.blockEquals(curBlock, msg.getBlock())
@@ -88,6 +97,7 @@ public class MessageController {
         Pair<Long, Set<String>> highBlockSigs = getHighBlockSigs(curState.getBidPsigsMap()); // 获得最高区块以及签名
         Block highBlock = blockService.getById(highBlockSigs.getKey()); // 获得最高区块
         highBlock.setFlag(null);
+
         List<String> sigs = new ArrayList<>(highBlockSigs.getValue()); // 最高区块的部分签名集合
         // 若收集满则聚合签名并更新curState
         if (curState.getCurAggrSig() == null && sigs.size() >= n - f) {
@@ -132,7 +142,7 @@ public class MessageController {
     public Result<?> handleEditRequest(@RequestParam("editOptions") String editOptions) throws UnsupportedEncodingException {
         editOptions = URLDecoder.decode(editOptions);
         msgService.get(serverConfig.getRegUrl() + "/status/confirmHighBlock"); // 触发投票机制
-        log.info(String.format("接收到%s消息内容:%s，当前状态为%s", "REQUEST", editOptions,localStatus.toString()));
+        log.info(String.format("接收到%s消息内容:%s，当前状态为%s", "REQUEST", editOptions, localStatus.toString()));
         int curViewNum = localStatus.getCurViewNumber();
         if (!statusService.isCurrentLeader()) { // 不是领导
             boolean success = msgService.testAndGet(statusService.leader(curViewNum) + "/message/REQUEST?editOptions=" + URLEncoder.encode(editOptions));
@@ -175,16 +185,23 @@ public class MessageController {
         if (!statusService.leader(msg.getViewNumber()).equals(msg.getUrl())) {
             return Result.failure(ResultStatus.BAD_REQUEST);
         }
+        // 如果聚合签名合法
+        Block parentBlock = blockService.getParentBlock(msg.getBlock());
 
+        // 区块高度不一致
+        if (parentBlock == null) {
+            msgService.syncBlockHeight(); // 更新区块高度
+            blockService.pullLocalStatus(); // 更新本地状态
+            parentBlock = blockService.getParentBlock(msg.getBlock());
+        }
+        parentBlock.setFlag(null);
         int curViewNum = localStatus.getCurViewNumber(); // 当前视图
         Map<Integer, State> viewStateMap = localStatus.getViewStateMap();
         // 获得当前视图的状态
         State curState = viewStateMap.getOrDefault(curViewNum, new State());
         viewStateMap.put(curViewNum, curState);
 
-        // 如果聚合签名合法
-        Block parentBlock = blockService.getParentBlock(msg.getBlock());
-        parentBlock.setFlag(null);
+
         String aggrSig = msg.getBlock().getAggrSig();
         Boolean aggrValidateRes = thresholdSignature.aggrValidata(parentBlock, aggrSig); // 聚合签名认证结果
         log.info(String.format("区块:%s\n聚合签名认证结果：%s", parentBlock, aggrValidateRes));

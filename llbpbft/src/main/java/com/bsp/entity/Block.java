@@ -8,6 +8,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Objects;
+
 /**
  * 区块
  *
@@ -18,7 +20,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @TableName(value = "block", resultMap = "blockResultMap")
-public class Block {
+public class Block implements Comparable<Block> {
     @TableId("block_id")
     private Long blockId; // 全局唯一ID
 
@@ -45,4 +47,24 @@ public class Block {
 
     @TableField("flag")
     private String flag; // 状态COMMITTED LOCKED PREPARED
+
+    @Override
+    public int compareTo(Block o) {
+        return Long.compare(this.getBlockId(), o.getBlockId());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o instanceof Block) {
+            Block b = (Block) o;
+            return Objects.equals(b.blockId, ((Block) o).blockId)
+                    && Objects.equals(b.getContent(), ((Block) o).getContent());
+        }
+        return false;
+    }
+
+    @Override
+    public int hashCode() {
+        return blockId.hashCode();
+    }
 }
