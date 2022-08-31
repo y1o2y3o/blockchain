@@ -138,15 +138,15 @@ public class MessageController {
     }
 
     //领导监听客户端请求
-    @GetMapping("/REQUEST")
-    public Result<?> handleEditRequest(@RequestParam("editOptions") String editOptions) throws UnsupportedEncodingException {
-        editOptions = URLDecoder.decode(editOptions);
+    @PostMapping("/REQUEST")
+    public Result<?> handleEditRequest(@RequestBody @Valid EditRequest editRequest) throws UnsupportedEncodingException {
+//        editOptions = URLDecoder.decode(editOptions);
         msgService.get(serverConfig.getRegUrl() + "/status/confirmHighBlock"); // 触发投票机制
-        log.info(String.format("接收到%s消息内容:%s，当前状态为%s", "REQUEST", editOptions, localStatus.toString()));
+        log.info(String.format("接收到%s消息内容:%s，当前状态为%s", "REQUEST", editRequest, localStatus.toString()));
         int curViewNum = localStatus.getCurViewNumber();
         if (!statusService.isCurrentLeader()) { // 不是领导
-            boolean success = msgService.testAndGet(statusService.leader(curViewNum) + "/message/REQUEST?editOptions=" + URLEncoder.encode(editOptions));
-            log.info("正在将用户请求 " + editOptions + " 转发给当前视图[" + curViewNum + "]领导 " + statusService.leader(curViewNum));
+            boolean success = msgService.testAndPost(statusService.leader(curViewNum) + "/message/REQUEST", editRequest);
+            log.info("正在将用户请求 " + editRequest + " 转发给当前视图[" + curViewNum + "]领导 " + statusService.leader(curViewNum));
             return success ? Result.success(ResultStatus.REDIRECT) : Result.failure(ResultStatus.INTERNAL_SERVER_ERROR);
         }
 //        if (localStatus.getSyncFlag()) { // 正在同步区块高度
@@ -163,7 +163,7 @@ public class MessageController {
         // 对当前最高区块的聚合签名
         String curAggrSig = curState.getCurAggrSig();
         // 插入新区块
-        Block newBlock = blockService.genNewBlock(curState.getHighBlock(), curViewNum, editOptions, curAggrSig);
+        Block newBlock = blockService.genNewBlock(curState.getHighBlock(), curViewNum, editRequest.getEditOptions(), curAggrSig);
         //blockService.update(newBlock); // 更新当前区块链状态
         // 广播PROPOSAL消息
         globalStatus.getHostList().forEach(host -> {

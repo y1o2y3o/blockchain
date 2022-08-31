@@ -85,7 +85,7 @@ public class MsgServiceImpl implements MsgService {
         // 访问下一个节点
         try {
             Objects.requireNonNull(restTemplate.postForObject(url,
-                    new HttpEntity<>(JSON.toJSONString(data), headers), String.class));
+                    new HttpEntity<>(JSON.toJSONString(data), headers), Result.class));
             return true;
         } catch (Exception e) {
             log.error(e.toString());
